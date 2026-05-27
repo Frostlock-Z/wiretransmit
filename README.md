@@ -13,6 +13,7 @@
 ## 目录
 
 - [快速开始](#快速开始)
+- [使用指南](#使用指南)
 - [系统架构](#系统架构)
 - [协议设计](#协议设计)
 - [命令行参数](#命令行参数)
@@ -47,12 +48,31 @@ pip install -r requirements.txt
 
 ### 基本使用
 
-```bash
-# 1. 接收端（先启动）
-python receive.py received_file.png --mode 4fsk --baud 300
+**务必先启动接收端，再启动发送端。**
 
-# 2. 发送端（后启动）
-python send.py original_file.png --mode 4fsk --baud 300
+```bash
+# 接收端（先启动）
+python receive.py received_file.png
+
+# 发送端（后启动）
+python send.py original_file.png
+```
+
+传输过程会显示四阶段进度：
+
+```
+[1/4] 握手 ...
+  收到 ACK — 接收端已就绪。
+
+[2/4] 数据传输 ...
+  发送 [██████████████████████████████] 100.0%  (8/8)
+  所有数据包已发送。
+
+[3/4] 校验 ...
+  未收到 NACK — 假设所有包均已成功接收。
+
+[4/4] 完成确认 ...
+  收到 DONE — 传输完成。
 ```
 
 ### 查看音频设备
@@ -60,6 +80,47 @@ python send.py original_file.png --mode 4fsk --baud 300
 ```bash
 python send.py --list-devices
 ```
+
+---
+
+## 使用指南
+
+### 常用命令行示例
+
+```bash
+# 追求速度：提高波特率到 600
+python send.py large_file.bin --baud 600
+python receive.py output.bin --baud 600
+
+# 信道质量差：降低波特率换取稳定性
+python send.py important.dat --baud 100
+python receive.py output.dat --baud 100
+
+# 切换回经典 2-FSK（兼容性更好）
+python send.py data.bin --mode 2fsk
+python receive.py output.bin --mode 2fsk
+
+# 指定音频设备（多声卡或多接口时）
+python send.py file.bin --device "扬声器"
+python receive.py out.bin --device "麦克风"
+
+# 更长的监听超时（大文件或低速传输时）
+python receive.py out.bin --timeout 300
+
+# 播放测试音验证音频输出
+python send.py --test-tone
+```
+
+### 波特率选型建议
+
+| 使用场景 | 推荐波特率 | 调制方式 | 净速率 | 1 MB 耗时 |
+|----------|-----------|---------|--------|----------|
+| 远距离 / 老设备 / 噪声环境 | 100 | 4-FSK | ~170 bps | ~48 秒 |
+| **日常使用（默认）** | **300** | **4-FSK** | **~500 bps** | **~17 秒** |
+| 短距离 / 新设备 / 优质线材 | 600 | 4-FSK | ~1000 bps | ~8 秒 |
+| 极限兼容性（降级模式） | 100 | 2-FSK | ~85 bps | ~95 秒 |
+
+> 发送端和接收端的 `--baud` 和 `--mode` 参数必须保持一致。
 
 ---
 
