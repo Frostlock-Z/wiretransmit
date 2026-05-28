@@ -56,6 +56,9 @@ def find_device(name: str, kind: str = "output") -> Optional[int]:
             continue
         if kind == "output" and d.get("max_output_channels", 0) <= 0:
             continue
+        # 验证设备真的可用
+        if not _probe_device(i, kind):
+            continue
         candidates.append(i)
     return candidates[0] if candidates else None
 
@@ -67,6 +70,25 @@ def set_device(device_id: Optional[int], kind: str) -> None:
             sd.default.device[0] = device_id
         else:
             sd.default.device[1] = device_id
+
+
+def _probe_device(device_id: int, kind: str) -> bool:
+    """快速验证设备是否真的可用（部分驱动上报可用但实际打不开）。"""
+    try:
+        if kind == "input":
+            stream = sd.InputStream(
+                samplerate=SAMPLE_RATE, channels=1,
+                dtype="float32", device=device_id,
+            )
+        else:
+            stream = sd.OutputStream(
+                samplerate=SAMPLE_RATE, channels=1,
+                dtype="float32", device=device_id,
+            )
+        stream.close()
+        return True
+    except Exception:
+        return False
 
 
 # ===================================================================
