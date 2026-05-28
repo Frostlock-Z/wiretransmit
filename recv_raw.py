@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-recv_raw.py — 单向强制接收（不做握手，不发 ACK）。
+recv_raw.py — 单向强制接收。
 
 用法：
-    python recv_raw.py <输出文件>
-
-适用于单根音频线、接收端只能被动接收的场景。
+    python recv_raw.py <输出文件> [--timeout 秒数]
 """
 
 import argparse, sys, os
@@ -24,7 +22,7 @@ def main():
     parser.add_argument("output", help="输出文件路径")
     parser.add_argument("--mode", default="4fsk", choices=["2fsk","4fsk"])
     parser.add_argument("--baud", type=int, default=300)
-    parser.add_argument("--timeout", type=float, default=120)
+    parser.add_argument("--timeout", type=float, default=300, help="最大录音时长（秒），默认300")
     parser.add_argument("--device", type=int, default=None)
     args = parser.parse_args()
 
@@ -32,7 +30,8 @@ def main():
         sd.default.device[0] = args.device
 
     dem = FSKDemodulator(args.mode, args.baud)
-    print(f"  单向接收模式 — 监听 {args.timeout}s ...  (请启动发送端)")
+
+    print(f"  单向接收模式 — 录音 {args.timeout}s ...  (请启动发送端)")
     sys.stdout.flush()
 
     raw = sd.rec(int(args.timeout * SAMPLE_RATE),
@@ -61,11 +60,8 @@ def main():
     print(f"  信号质量: {qual * 100:.1f}%")
     print(f"  接收 {len(payload)} 字节 (RS 编码后)")
 
-    # RS 解码
     try:
         decoded = rs_decode(payload)
-        # 找原始文件末尾（去除补零）
-        # 简单做法：找最后一个非零字节位置
         end = len(decoded)
         while end > 0 and decoded[end - 1] == 0:
             end -= 1

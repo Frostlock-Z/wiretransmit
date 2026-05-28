@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 """
-send_raw.py — 单向强制发送（不做握手，不等 ACK）。
+send_raw.py — 单向强制发送。
 
 用法：
     python send_raw.py <文件路径>
-
-适用于单根音频线、耳机口接收听信号但无法回传 ACK 的场景。
 """
 
-import argparse, sys, os, time, hashlib
+import argparse, sys, os, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
 import sounddevice as sd
-from wiretransmit.constants import SAMPLE_RATE, MAX_FILE_SIZE, PREAMBLE_BITS, SYNC_WORD, END_MARKER
+from wiretransmit.constants import SAMPLE_RATE, MAX_FILE_SIZE
 from wiretransmit.modulator import FSKModulator
 from wiretransmit.framing import build_frame_bits
 from wiretransmit.ecc import encode as rs_encode
@@ -34,12 +32,12 @@ def main():
         sys.exit(1)
 
     encoded = rs_encode(data)
-
     mod = FSKModulator(args.mode, args.baud)
     bits = build_frame_bits(encoded)
     signal = mod.modulate(bits)
     dur = len(signal) / SAMPLE_RATE
     bps = len(encoded) * 8 / dur
+    total_dur = dur * args.repeat + 0.5 * (args.repeat - 1)
 
     print("=" * 52)
     print("  单向强制发送模式")
@@ -47,12 +45,13 @@ def main():
     print(f"  文件 : {os.path.basename(args.file)}")
     print(f"  大小 : {len(data):,d} B  ({len(data)/1024:.1f} KiB)")
     print(f"  RS编码后 : {len(encoded):,d} B")
-    print(f"  时长 : {dur:.1f}s  速率 : ~{bps:.0f} bps")
-    print(f"  重复 : {args.repeat} 次")
+    print(f"  单次时长 : {dur:.1f}s  ×{args.repeat} = 总计 {total_dur:.0f}s")
+    print(f"  速率 : ~{bps:.0f} bps")
     print("=" * 52)
+    print(f"\n  >>> 接收端请设置: --timeout {int(total_dur + 5)} <<<\n")
 
     for i in range(args.repeat):
-        print(f"\n  [{i+1}/{args.repeat}] 发送中 ...")
+        print(f"  [{i+1}/{args.repeat}] 发送中 ...")
         sd.play(signal.astype(np.float32), SAMPLE_RATE)
         sd.wait()
         if i < args.repeat - 1:
