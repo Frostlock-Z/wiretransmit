@@ -23,6 +23,7 @@ Thumbs.db
 
 # Project-specific
 .workbuddy/
+uv.lock
 
 # Test / temp
 *.log
