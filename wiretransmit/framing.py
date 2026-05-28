@@ -183,6 +183,8 @@ def parse_packet_bits(bits: List[int]) -> Tuple[Optional[dict], str]:
     remaining = len(bits) - pos - 16 - 16   # -CRC16 -END
     if remaining < 0:
         return None, "数据包过短"
+    # 对齐到字节边界（解调后的比特可能有尾部噪声）
+    remaining = (remaining // 8) * 8
 
     payload_bits = bits[pos:pos + remaining]
     pos += remaining
